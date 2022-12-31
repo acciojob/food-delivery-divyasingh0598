@@ -1,12 +1,11 @@
 package com.driver.ui.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.driver.model.request.FoodDetailsRequestModel;
 import com.driver.model.response.FoodDetailsResponse;
 import com.driver.model.response.OperationStatusModel;
-import com.driver.model.response.RequestOperationName;
-import com.driver.model.response.RequestOperationStatus;
 import com.driver.service.FoodService;
 import com.driver.service.impl.FoodServiceImpl;
 import com.driver.shared.dto.FoodDto;
@@ -25,39 +24,91 @@ import org.springframework.web.bind.annotation.RestController;
 public class FoodController {
 
 	@Autowired
-	FoodServiceImpl foodService;
+	FoodServiceImpl foodServiceImpl;
+
 
 	@GetMapping(path="/{id}")
 	public FoodDetailsResponse getFood(@PathVariable String id) throws Exception{
-		FoodDto foodDto=foodService.getFoodById(id);
-		return FoodDetailsResponse.builder().foodId(foodDto.getFoodId()).foodCategory(foodDto.getFoodCategory()).foodName(foodDto.getFoodName()).foodPrice(foodDto.getFoodPrice()).build();
+		FoodDto foodDto = foodServiceImpl.getFoodById(id);
+		if(foodDto==null){
+			throw new Exception("Food doesn't exist");
+		}
+		FoodDetailsResponse foodDetailsResponse = FoodDetailsResponse.builder()
+				.foodId(foodDto.getFoodId())
+				.foodName(foodDto.getFoodName())
+				.foodPrice(foodDto.getFoodPrice())
+				.foodCategory(foodDto.getFoodCategory())
+				.build();
+		return foodDetailsResponse;
 	}
 
 	@PostMapping("/create")
 	public FoodDetailsResponse createFood(@RequestBody FoodDetailsRequestModel foodDetails) {
-		FoodDto foodDto=foodService.createFood(FoodDto.builder().foodCategory(foodDetails.getFoodCategory()).foodName(foodDetails.getFoodName()).foodPrice(foodDetails.getFoodPrice()).build());
-		return FoodDetailsResponse.builder().foodId(foodDto.getFoodId()).foodCategory(foodDto.getFoodCategory()).foodName(foodDto.getFoodName()).foodPrice(foodDto.getFoodPrice()).build();
+		FoodDto foodDto = FoodDto.builder()
+				.foodName(foodDetails.getFoodName())
+				.foodPrice(foodDetails.getFoodPrice())
+				.foodCategory(foodDetails.getFoodCategory())
+				.build();
+		foodServiceImpl.createFood(foodDto);
+
+		return FoodDetailsResponse.builder()
+				.foodName(foodDetails.getFoodName())
+				.foodCategory(foodDetails.getFoodCategory())
+				.foodPrice(foodDetails.getFoodPrice())
+				.build();
 	}
 
 	@PutMapping(path="/{id}")
 	public FoodDetailsResponse updateFood(@PathVariable String id, @RequestBody FoodDetailsRequestModel foodDetails) throws Exception{
-		FoodDto foodDto=foodService.updateFoodDetails(id,FoodDto.builder().foodCategory(foodDetails.getFoodCategory()).foodName(foodDetails.getFoodName()).foodPrice(foodDetails.getFoodPrice()).build());
-		return FoodDetailsResponse.builder().foodId(foodDto.getFoodId()).foodCategory(foodDto.getFoodCategory()).foodName(foodDto.getFoodName()).foodPrice(foodDto.getFoodPrice()).build();
+		FoodDto foodDto = FoodDto.builder()
+				.foodId(id)
+				.foodName(foodDetails.getFoodName())
+				.foodCategory(foodDetails.getFoodCategory())
+				.foodPrice(foodDetails.getFoodPrice())
+				.build();
+		try{
+			foodServiceImpl.updateFoodDetails(id , foodDto);
+		}
+		catch(Exception e){
+			throw new Exception("Food doesn't exist");
+		}
+		return FoodDetailsResponse.builder()
+				.foodId(id)
+				.foodName(foodDetails.getFoodName())
+				.foodPrice(foodDetails.getFoodPrice())
+				.foodCategory(foodDetails.getFoodCategory())
+				.build();
 	}
 
 	@DeleteMapping(path = "/{id}")
 	public OperationStatusModel deleteFood(@PathVariable String id) throws Exception{
-		foodService.deleteFoodItem(id);
-		OperationStatusModel operationStatusModel=OperationStatusModel.builder().operationResult(String.valueOf(RequestOperationStatus.SUCCESS)).operationName(String.valueOf(RequestOperationName.DELETE)).build();
-		return operationStatusModel;
+		try{
+			foodServiceImpl.deleteFoodItem(id);
+		}
+		catch(Exception e){
+			throw new Exception("No user exist with that id");
+		}
+
+		return new OperationStatusModel("SUCCESS" , "Delete Food");
 	}
 
 	@GetMapping()
 	public List<FoodDetailsResponse> getFoods() {
-		List<FoodDetailsResponse> foodDetailsResponses = null;
-		for(FoodDto foodDto: foodService.getFoods()){
-			foodDetailsResponses.add(FoodDetailsResponse.builder().foodName(foodDto.getFoodName()).foodPrice(foodDto.getFoodPrice()).foodId(foodDto.getFoodId()).foodCategory(foodDto.getFoodCategory()).build());
+
+		List<FoodDto> list = foodServiceImpl.getFoods();
+		List<FoodDetailsResponse> ans = new ArrayList<>();
+
+		for(int i=0 ; i<list.size() ; i++){
+			FoodDto foodDto = list.get(i);
+			FoodDetailsResponse foodDetailsResponse = FoodDetailsResponse.builder()
+					.foodId(foodDto.getFoodId())
+					.foodName(foodDto.getFoodName())
+					.foodCategory(foodDto.getFoodCategory())
+					.foodPrice(foodDto.getFoodPrice())
+					.build();
+			ans.add(foodDetailsResponse);
 		}
-		return foodDetailsResponses;
+
+		return ans;
 	}
 }
